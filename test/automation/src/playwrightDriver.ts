@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as puppeteer from 'puppeteer';
+import * as playwright from 'playwright';
 import { ChildProcess, spawn } from 'child_process';
 import { join } from 'path';
 import { mkdir } from 'fs';
@@ -13,7 +13,7 @@ import { IDriver, IDisposable } from './driver';
 const width = 1200;
 const height = 800;
 
-const vscodeToPuppeteerKey: { [key: string]: string } = {
+const vscodeToPlaywrightKey: { [key: string]: string } = {
 	cmd: 'Meta',
 	ctrl: 'Control',
 	shift: 'Shift',
@@ -26,7 +26,7 @@ const vscodeToPuppeteerKey: { [key: string]: string } = {
 	home: 'Home'
 };
 
-function buildDriver(browser: puppeteer.Browser, page: puppeteer.Page): IDriver {
+function buildDriver(browser: playwright.Browser, page: playwright.Page): IDriver {
 	const driver: IDriver = {
 		_serviceBrand: undefined,
 		getWindowIds: () => {
@@ -45,8 +45,8 @@ function buildDriver(browser: puppeteer.Browser, page: puppeteer.Page): IDriver 
 				const keys = chord.split('+');
 				const keysDown: string[] = [];
 				for (let i = 0; i < keys.length; i++) {
-					if (keys[i] in vscodeToPuppeteerKey) {
-						keys[i] = vscodeToPuppeteerKey[keys[i]];
+					if (keys[i] in vscodeToPlaywrightKey) {
+						keys[i] = vscodeToPlaywrightKey[keys[i]];
 					}
 					await page.keyboard.down(keys[i]);
 					keysDown.push(keys[i]);
@@ -137,14 +137,15 @@ function waitForEndpoint(): Promise<string> {
 
 export function connect(headless: boolean, outPath: string, handle: string): Promise<{ client: IDisposable, driver: IDriver }> {
 	return new Promise(async (c) => {
-		const browser = await puppeteer.launch({
+		const browser = await playwright['webkit'].launch({
 			// Run in Edge dev on macOS
 			// executablePath: '/Applications/Microsoft\ Edge\ Dev.app/Contents/MacOS/Microsoft\ Edge\ Dev',
 			headless,
-			slowMo: 80,
-			args: [`--window-size=${width},${height}`]
+			// slowMo: 80,
+			// args: [`--window-size=${width},${height}`]
 		});
-		const page = (await browser.pages())[0];
+		const context = await browser.newContext();
+		const page = await context.newPage();
 		await page.setViewport({ width, height });
 		await page.goto(`${endpoint}&folder=vscode-remote://localhost:9888${args![1]}`);
 		const result = {
